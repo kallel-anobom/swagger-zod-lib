@@ -1,0 +1,33 @@
+{
+  "name": "swagger-zod-lib",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "prepublish": "npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@prisma/client": "^6.6.0",
+    "@types/express": "^5.0.1",
+    "@types/node": "^22.14.1",
+    "@types/swagger-ui-express": "^4.1.8",
+    "mongoose": "^8.13.2",
+    "typeorm": "^0.3.22",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "swagger-ui-express": "^5.0.1",
+    "zod": "^3.24.2"
+  },
+  "peerDependencies": {
+    "@prisma/client": ">=3.0.0",
+    "mongoose": ">=6.0.0",
+    "typeorm": ">=0.3.0"
+  }
+}
