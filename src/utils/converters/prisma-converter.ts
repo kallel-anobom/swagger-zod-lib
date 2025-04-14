@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { DMMF } from "@prisma/client/runtime";
+import { dmmf } from "@prisma/client";
 
-export function prismaToZod(model: DMMF.Model): z.ZodSchema<any> {
+export function prismaToZod(model: dmmf): z.ZodSchema<any> {
   const shape: Record<string, any> = {};
 
   if (!model?.fields) {
