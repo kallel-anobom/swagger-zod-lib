@@ -13,9 +13,9 @@ interface Components {
 }
 
 export interface SwaggerOptions {
-  title?: string;
-  description?: string;
-  version?: string;
+  title: string;
+  description: string;
+  version: string;
   basePath?: string;
   externalDocs?: {
     url: string;
