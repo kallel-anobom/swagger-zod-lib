@@ -1,13 +1,14 @@
-// Exportação principal
-export { ZodSwaggerGenerator } from "./swagger";
+// Main Export
+export { ZodSwaggerGenerator } from "./core/ZodSchemaToSwaggerOptions";
 
-// Tipos
+// Types
 export type { RouteDefinition, ZodSchemaToSwaggerOptions } from "./types";
 
-// Utilitários
+// Utilities
 export { zodExtensions } from "./utils/zod-extensions";
+export { loadYamlSpecs } from "./utils/fileManipulation/file";
 
-// Interface dos conversores (definida localmente)
+// Converter interface (locally defined)
 interface Converters {
   mongoose: {
     mongooseToZod: (schema: any) => import("zod").ZodSchema<any>;
@@ -20,26 +21,26 @@ interface Converters {
   };
 }
 
-// Implementação dos conversores
+// Implementation of converters
 export const converters = {
   mongoose: () =>
-    import("./utils/converters/mongoose-converter").then((m) => ({
+    import("./converters/mongoose-converter").then((m) => ({
       mongooseToZod: m.mongooseToZod,
     })),
   prisma: () =>
-    import("./utils/converters/prisma-converter").then((p) => ({
+    import("./converters/prisma-converter").then((p) => ({
       prismaToZod: p.prismaToZod,
     })),
   typeorm: () =>
-    import("./utils/converters/typeorm-converter").then((t) => ({
+    import("./converters/typeorm-converter").then((t) => ({
       typeormToZod: t.typeormToZod,
     })),
 } satisfies Record<keyof Converters, () => Promise<any>>;
 
-// Schemas comuns
+// Common schemas
 export * as commonSchemas from "./schemas/common";
 
-// Re-exportação do Zod
+// Zod Re-export
 export { z } from "zod";
 export type {
   ZodString,
