@@ -10,17 +10,19 @@
     /* Language and Environment */
     "target": "ES2017",
     /* Modules */
-    "module": "CommonJS",
+    "module": "ESNext",
     /* JavaScript Support */
-    // "moduleResolution": "node",
+    "moduleResolution": "bundler",
     /* Emit */
     "declaration": true,
     "declarationMap": true,
+    "emitDeclarationOnly": false,
     "sourceMap": true,
     "outDir": "./dist",
     "rootDir": "./src",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
     /* Type Checking */
     "strict": true,
     /* Completeness */
