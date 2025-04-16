@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CustomZodSchema } from "../types";
+import { CustomZodSchema } from "../types/";
 
 declare module "zod" {
   interface ZodString {
