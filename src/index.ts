@@ -8,18 +8,7 @@ export type { RouteDefinition, ZodSchemaToSwaggerOptions } from "./types";
 export { zodExtensions } from "./utils/zod-extensions";
 export { loadYamlSpecs } from "./utils/fileManipulation/file";
 
-// Converter interface (locally defined)
-interface Converters {
-  mongoose: {
-    mongooseToZod: (schema: any) => import("zod").ZodSchema<any>;
-  };
-  prisma: {
-    prismaToZod: (model: any) => import("zod").ZodSchema<any>;
-  };
-  typeorm: {
-    typeormToZod: (entity: any) => import("zod").ZodSchema<any>;
-  };
-}
+import { Converters } from "./types/ConvertersType";
 
 // Implementation of converters
 export const converters = {
