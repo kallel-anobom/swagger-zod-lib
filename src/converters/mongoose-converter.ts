@@ -1,57 +1,49 @@
 import { z } from "zod";
 import { Schema } from "mongoose";
 
-export function mongooseToZod(mongooseSchema: Schema): z.ZodSchema<any> {
+export function mongooseToZod(mongooseSchema: Schema): z.ZodObject<any> {
   if (!mongooseSchema?.paths) {
     throw new Error(`
-      Mongoose schema inválido. Certifique-se de:
-      1. Ter o mongoose instalado: npm install mongoose
-      2. Passar um schema válido do mongoose
+      Invalid Mongoose schema. Ensure:
+      1. mongoose is installed (npm install mongoose)
+      2. You're passing a valid Mongoose schema instance
+      3. Schema has paths defined
     `);
   }
 
-  const shape: Record<string, any> = {};
+  const shape: Record<string, z.ZodTypeAny> = {};
   const paths = mongooseSchema.paths;
 
   for (const path in paths) {
-    const type = paths[path].instance.toLowerCase();
-    const isRequired = paths[path].isRequired;
-
-    let zodType: z.ZodTypeAny;
-
-    switch (type) {
-      case "string":
-        zodType = z.string();
-        break;
-      case "number":
-        zodType = z.number();
-        break;
-      case "boolean":
-        zodType = z.boolean();
-        break;
-      case "date":
-        zodType = z.date();
-        break;
-      case "objectid":
-        zodType = z.string().regex(/^[0-9a-fA-F]{24}$/);
-        break;
-      case "array":
-        const arrayType =
-          paths[path].getEmbeddedSchemaType()?.instance?.toLowerCase() ||
-          "string";
-        zodType = z.array(convertBasicType(arrayType));
-        break;
-      default:
-        zodType = z.any();
+    try {
+      const pathInfo = paths[path];
+      const zodType = getZodTypeForMongoosePath(pathInfo);
+      shape[path] = pathInfo.isRequired ? zodType : zodType.optional();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      throw new Error(`Error processing path ${path}: ${message}`);
     }
-
-    shape[path] = isRequired ? zodType : zodType.optional();
   }
 
-  return z.object(shape);
+  return z.object(shape).strict();
 }
 
-function convertBasicType(type: string): z.ZodTypeAny {
+function getZodTypeForMongoosePath(pathInfo: any): z.ZodTypeAny {
+  const type = pathInfo.instance?.toLowerCase();
+  const schemaType = pathInfo.options?.type?.name?.toLowerCase();
+
+  if (pathInfo.$isMongooseArray) {
+    const arrayType =
+      pathInfo.caster?.instance?.toLowerCase() ||
+      pathInfo.options?.type[0]?.name?.toLowerCase() ||
+      "string";
+    return z.array(getBasicZodType(arrayType));
+  }
+
+  return getBasicZodType(type || schemaType);
+}
+
+function getBasicZodType(type: string): z.ZodTypeAny {
   switch (type) {
     case "string":
       return z.string();
@@ -63,6 +55,10 @@ function convertBasicType(type: string): z.ZodTypeAny {
       return z.date();
     case "objectid":
       return z.string().regex(/^[0-9a-fA-F]{24}$/);
+    case "buffer":
+      return z.instanceof(Buffer);
+    case "map":
+      return z.record(z.any());
     default:
       return z.any();
   }

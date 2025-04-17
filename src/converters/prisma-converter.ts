@@ -1,48 +1,56 @@
 import { z } from "zod";
-import { dmmf } from "@prisma/client";
+import { DMMF } from "@prisma/client/runtime/library";
 
-export function prismaToZod(model: dmmf): z.ZodSchema<any> {
-  const shape: Record<string, any> = {};
-
+export function prismaToZod(model: DMMF.Model): z.ZodObject<any> {
   if (!model?.fields) {
     throw new Error(`
-      Model Prisma inválido. Certifique-se de:
-      1. Ter @prisma/client instalado: npm install @prisma/client
-      2. Gerar o cliente Prisma: npx prisma generate
+      Invalid Prisma model. Ensure:
+      1. @prisma/client is installed
+      2. You've run 'prisma generate'
+      3. You're passing a valid model (e.g., prisma.user.$dmmf)
+      4. Model has fields defined
     `);
   }
 
+  const shape: Record<string, z.ZodTypeAny> = {};
+
   for (const field of model.fields) {
-    let zodType: z.ZodTypeAny;
+    try {
+      let zodType = mapPrismaTypeToZod(field.type, field.isList);
 
-    switch (field.type) {
-      case "String":
-        zodType = z.string();
-        break;
-      case "Int":
-      case "Float":
-      case "Decimal":
-        zodType = z.number();
-        break;
-      case "Boolean":
-        zodType = z.boolean();
-        break;
-      case "DateTime":
-        zodType = z.date();
-        break;
-      case "Json":
-        zodType = z.any();
-        break;
-      default:
-        zodType = z.any();
+      if (field.documentation) {
+        zodType = zodType.describe(field.documentation);
+      }
+
+      shape[field.name] = field.isRequired ? zodType : zodType.optional();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      throw new Error(`Error processing field ${field.name}: ${message}`);
     }
-
-    if (field.isList) {
-      zodType = z.array(zodType);
-    }
-
-    shape[field.name] = field.isRequired ? zodType : zodType.optional();
   }
 
   return z.object(shape);
+}
+
+function mapPrismaTypeToZod(type: string, isList: boolean): z.ZodTypeAny {
+  const baseType = (() => {
+    switch (type) {
+      case "String":
+        return z.string();
+      case "Int":
+      case "Float":
+      case "Decimal":
+        return z.number();
+      case "Boolean":
+        return z.boolean();
+      case "DateTime":
+        return z.date();
+      case "Json":
+        return z.any();
+      default:
+        return z.unknown();
+    }
+  })();
+
+  return isList ? z.array(baseType) : baseType;
 }
