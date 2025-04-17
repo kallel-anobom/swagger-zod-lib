@@ -153,6 +153,112 @@ Ou gerar rotas específicas por entidade (ex: /docs/users, /docs/products)
 
 /api-docs/{domain} - Docs por domínio (ex: /api-docs/accounts)
 
+### 🧪 Usando com Express
+
+```lua
+docsYml/
+├── accounts/
+│   ├── create.yaml
+│   └── list.yaml
+├── transactions/
+│   ├── create.yaml
+│   └── list.yaml
+```
+
+#### 📘 Exemplo 1: Documentação separada por domínio
+
+```ts
+import express from "express";
+import { loadYamlSpecs, ZodSwaggerGenerator } from "swagger-zod-lib";
+import swaggerUi from "swagger-ui-express";
+import path from "path";
+import fs from "fs";
+
+const app = express();
+const port = 3000;
+
+const docsBasePath = path.join(__dirname, "docsYml");
+
+const domains = fs
+  .readdirSync(docsBasePath)
+  .filter((file) => fs.statSync(path.join(docsBasePath, file)).isDirectory());
+
+domains.forEach((domain) => {
+  const yamlPath = path.join(docsBasePath, domain);
+  const specs = loadYamlSpecs(yamlPath);
+
+  const swagger = new ZodSwaggerGenerator({
+    title: `${domain} API`,
+    version: "1.0",
+    description: `Documentação do módulo ${domain}`,
+    basePath: `http://localhost:${port}/${domain}`,
+    mergeSpecs: specs.map((content) => ({
+      type: "preloaded" as const,
+      content,
+    })),
+  });
+
+  const spec = swagger.generateSpec();
+
+  app.use(
+    `/api-docs/${domain}`,
+    swaggerUi.serveFiles(spec),
+    swaggerUi.setup(spec)
+  );
+});
+
+app.listen(port, () => {
+  console.log(`Docs por domínio disponíveis em:`);
+  domains.forEach((domain) => {
+    console.log(`http://localhost:${port}/api-docs/${domain}`);
+  });
+});
+```
+
+#### 📗 Exemplo 2: Documentação única com todos os domínios
+
+```ts
+import express from "express";
+import { loadYamlSpecs, ZodSwaggerGenerator } from "swagger-zod-lib";
+import swaggerUi from "swagger-ui-express";
+import path from "path";
+import fs from "fs";
+
+const app = express();
+const port = 3000;
+
+const docsBasePath = path.join(__dirname, "docsYml");
+const allYamlContents: any[] = [];
+
+const domains = fs
+  .readdirSync(docsBasePath)
+  .filter((file) => fs.statSync(path.join(docsBasePath, file)).isDirectory());
+
+domains.forEach((domain) => {
+  const yamlPath = path.join(docsBasePath, domain);
+  const specs = loadYamlSpecs(yamlPath);
+  allYamlContents.push(...specs);
+});
+
+const swagger = new ZodSwaggerGenerator({
+  title: "Documentação Completa da API",
+  version: "1.0",
+  description: "Todos os módulos reunidos em um único Swagger",
+  basePath: `http://localhost:${port}`,
+  mergeSpecs: allYamlContents.map((content) => ({
+    type: "preloaded" as const,
+    content,
+  })),
+});
+
+const spec = swagger.generateSpec();
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(spec));
+
+app.listen(port, () => {
+  console.log(`Swagger disponível em: http://localhost:${port}/api-docs`);
+});
+```
+
 ### 8. Configuração de Segurança
 
 ```ts
@@ -177,6 +283,80 @@ O merge de múltiplas specs lida com:
 - tags → evita duplicação
 - components.schemas → combina schemas
 - parameters → resolve conflitos por name + in
+
+---
+
+## 📟 Para que serve o CLI?
+
+O CLI (Command Line Interface) desse projeto serve para:
+
+📥 Carregar automaticamente specs OpenAPI (de .json, .yaml, ou .zod)
+
+🔁 Converter schemas de ORMs para Zod (como Prisma, Mongoose e TypeORM)
+
+🛠️ Gerar uma spec final em OpenAPI format
+
+📤 Exportar a documentação para um arquivo .json ou .yaml
+
+🧬 Unir specs diferentes em uma só
+
+Ou seja: o CLI te ajuda a automatizar o processo de montar a documentação da API sem escrever manualmente os arquivos do Swagger.
+
+### Como usar o CLI
+
+1. 📦 Instalação global ou local
+   Global (opcional)
+
+```bash
+npm install -g swagger-zod-lib
+```
+
+2. Local (recomendado no projeto)
+
+```bash
+npm install --save-dev swagger-zod-lib
+```
+
+### 🛠️ Comandos disponíveis
+
+### Convert
+
+Converte schemas de um ORM para Zod e gera uma spec Swagger.
+
+```bash
+npx swagger-zod-lib convert --orm=mongoose --input=./src/schemas --output=./docs/swagger.json
+```
+
+| Flag       | DescripDescriçãotion                     |
+| ---------- | ---------------------------------------- |
+| `--orm `   | Qual ORM usar (mongoose, prisma, typeorm |
+| `--input`  | Caminho da pasta/arquivo com os schemas  |
+| `--output` | Caminho onde será salvo o Swagger .json  |
+| `--format` | Formato final (json ou yaml)             |
+
+#### 📚 merge
+
+Faz o merge de várias specs OpenAPI em uma só.
+
+```bash
+npx swagger-zod-libr merge --input=./docs --output=./dist/merged-spec.yaml
+```
+
+#### 🧪 serve
+
+Serve a documentação em uma rota local (/docs por padrão).
+
+```bash
+npx swagger-zod-libr serve --input=./dist/swagger.json
+```
+
+### 🔁 Exemplo completo de uso
+
+```bash
+npx swagger-zod-libr convert --orm=mongoose --input=./schemas --output=./docs/swagger.json --format=json
+
+npx swagger-zod-libr serve --input=./docs/swagger.json
+```
 
 ### Contribuição
 
