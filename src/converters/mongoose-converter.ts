@@ -33,6 +33,12 @@ function getZodTypeForMongoosePath(pathInfo: any): z.ZodTypeAny {
   const schemaType = pathInfo.options?.type?.name?.toLowerCase();
 
   if (pathInfo.$isMongooseArray) {
+    const caster = pathInfo.caster;
+    // Check if it is a subdocument (embedded Schema)
+    if (caster?.schema) {
+      return z.array(mongooseToZod(caster.schema));
+    }
+
     const arrayType =
       pathInfo.caster?.instance?.toLowerCase() ||
       pathInfo.options?.type[0]?.name?.toLowerCase() ||
