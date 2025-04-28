@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Express } from "express";
-import swaggerUi from "swagger-ui-express";
+import * as swaggerUi from "swagger-ui-express";
 import { ZodSwaggerGenerator } from "../../core/ZodSchemaToSwaggerOptions";
 import { RouteDefinition, ZodSchemaToSwaggerOptions } from "../../types";
 
@@ -282,5 +282,25 @@ describe("ZodSwaggerGenerator", () => {
       expect.any(Function)
     );
     expect(app.get).toHaveBeenCalledWith("/swagger.json", expect.any(Function));
+  });
+
+  it("should convert OpenAPI 3.0 to Swagger 2.0", async () => {
+    const generator = new ZodSwaggerGenerator({
+      title: "Test API",
+      version: "1.0.0",
+      description: "Test API documentation",
+    });
+
+    generator.addRoute({
+      path: "/test",
+      method: "get",
+      responses: {
+        "200": { description: "OK" },
+      },
+    });
+
+    const swagger2 = await generator.generateSwagger2();
+    expect(swagger2.swagger).toEqual("2.0");
+    expect(swagger2.paths["/test"]).toBeDefined();
   });
 });
