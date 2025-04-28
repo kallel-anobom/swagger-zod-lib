@@ -1,6 +1,6 @@
 {
   "name": "swagger-zod-lib",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Gere documentação Swagger a partir de Zod, com suporte a YAML externo e CLI.",
   "type": "commonjs",
   "files": [
