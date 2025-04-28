@@ -1,12 +1,16 @@
 import * as fs from "fs";
 import * as path from "path";
+import * as swaggerUi from "swagger-ui-express";
 import { z } from "zod";
 import { Express } from "express";
 import { load } from "js-yaml";
-import swaggerUi from "swagger-ui-express";
 
-import { RouteDefinition, ZodSchemaToSwaggerOptions } from "../types";
-import { SwaggerOptions } from "../swagger-options";
+import {
+  OpenAPI3Endpoint,
+  RouteDefinition,
+  Swagger2Endpoint,
+  ZodSchemaToSwaggerOptions,
+} from "../types";
 import { deepMergeSwagger } from "../utils/fileManipulation/deepMergeSwagger";
 import { loadYamlSpecs } from "../utils/fileManipulation/loadYamlSpecs";
 
@@ -320,6 +324,82 @@ export class ZodSwaggerGenerator {
     return this.mergeSwaggerSpecs(this.spec, this.options);
   }
 
+  async generateSwagger2(spec?: any): Promise<any> {
+    const openApiSpec = spec || this.generateSpec();
+
+    // Conversão direta sem dependências externas
+    const swagger2Doc: any = {
+      swagger: "2.0",
+      info: { ...openApiSpec.info },
+      host: new URL(openApiSpec.servers?.[0]?.url || "http://localhost").host,
+      basePath: "/",
+      paths: {},
+      definitions: {},
+      tags: openApiSpec.tags || [],
+    };
+
+    // Convert components.schemas to definitions
+    if (openApiSpec.components?.schemas) {
+      swagger2Doc.definitions = openApiSpec.components.schemas;
+    }
+
+    // Convert paths
+    for (const [path, methods] of Object.entries(openApiSpec.paths || {})) {
+      const pathMethods = methods as Record<string, OpenAPI3Endpoint>;
+      swagger2Doc.paths[path] = {};
+
+      for (const [method, endpoint] of Object.entries(pathMethods)) {
+        const swagger2Endpoint: Swagger2Endpoint = {
+          tags: endpoint.tags,
+          summary: endpoint.summary,
+          description: endpoint.description,
+          responses: {},
+          ...(endpoint.parameters && { parameters: [] }),
+        };
+
+        // Convert parameters
+        if (endpoint.parameters) {
+          swagger2Endpoint.parameters = endpoint.parameters.map(
+            (param: any) => {
+              if (param.$ref) return param;
+              return {
+                ...param,
+                ...(param.schema && { schema: param.schema }),
+              };
+            }
+          );
+        }
+
+        // Convert requestBody
+        if (endpoint.requestBody) {
+          const content = endpoint.requestBody.content["application/json"];
+          swagger2Endpoint.consumes = ["application/json"];
+          swagger2Endpoint.parameters = [
+            ...(swagger2Endpoint.parameters || []),
+            {
+              in: "body",
+              name: "body",
+              schema: content.schema,
+            },
+          ];
+        }
+
+        for (const [statusCode, response] of Object.entries(
+          endpoint.responses || {}
+        )) {
+          const res = response as any;
+          swagger2Endpoint.responses[statusCode] = {
+            description: res.description,
+            schema: res.content?.["application/json"]?.schema,
+          };
+        }
+
+        swagger2Doc.paths[path][method] = swagger2Endpoint;
+      }
+    }
+    return swagger2Doc;
+  }
+
   /**
    * Gets the name of the schema to be used in Swagger components.
    * @param schema - Schema Zod from which to extract the name.
@@ -348,11 +428,22 @@ export class ZodSwaggerGenerator {
    * @param app - Express instance.
    * @param path - Path to access documentation (default: "/api-docs").
    */
-  setupExpress(app: Express, path = "/api-docs"): void {
-    const spec = this.generateSpec();
-    app.use(path, swaggerUi.serve, swaggerUi.setup(spec));
-  }
+  setupExpress(
+    app: Express,
+    options: { path?: string; useSwagger2?: boolean } = {}
+  ) {
+    const path = options.path || "/api-docs";
+    const useSwagger2 = options.useSwagger2 || false;
 
+    if (useSwagger2) {
+      this.generateSwagger2().then((swagger2Spec) => {
+        app.use(path, swaggerUi.serve, swaggerUi.setup(swagger2Spec));
+      });
+    } else {
+      const spec = this.generateSpec();
+      app.use(path, swaggerUi.serve, swaggerUi.setup(spec));
+    }
+  }
   /**
    * Creates the route parameters/documentation for the Swagger route.
    * @param route - The route to be processed.
