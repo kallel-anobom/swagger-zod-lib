@@ -170,7 +170,7 @@ docsYml/
 ```ts
 import express from "express";
 import { loadYamlSpecs, ZodSwaggerGenerator } from "swagger-zod-lib";
-import swaggerUi from "swagger-ui-express";
+import * as swaggerUi from "swagger-ui-express";
 import path from "path";
 import fs from "fs";
 
@@ -220,9 +220,9 @@ app.listen(port, () => {
 ```ts
 import express from "express";
 import { loadYamlSpecs, ZodSwaggerGenerator } from "swagger-zod-lib";
-import swaggerUi from "swagger-ui-express";
-import path from "path";
+import * as swaggerUi from "swagger-ui-express";
 import fs from "fs";
+import path from "path";
 
 const app = express();
 const port = 3000;
