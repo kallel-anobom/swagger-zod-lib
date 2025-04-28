@@ -43,6 +43,30 @@ export interface RouteDefinition {
   security?: Array<{ [securityScheme: string]: string[] }>;
 }
 
+export interface Swagger2Endpoint {
+  tags?: string[];
+  summary?: string;
+  description?: string;
+  parameters?: any[];
+  responses: Record<string, any>;
+  consumes?: string[];
+}
+
+export interface OpenAPI3Endpoint {
+  tags?: string[];
+  summary?: string;
+  description?: string;
+  parameters?: any[];
+  requestBody?: {
+    content: {
+      "application/json": {
+        schema: any;
+      };
+    };
+  };
+  responses: Record<string, any>;
+}
+
 export type DynamicImport<T> = Promise<{ default: T }>;
 
 export type DynamicConverter<T> = {
