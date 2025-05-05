@@ -197,3 +197,53 @@ function mergeArrays(target: any[], source: any[]): any[] {
 function isObject(value: any): boolean {
   return value && typeof value === "object" && !Array.isArray(value);
 }
+
+function updateSchemaRefs(obj: any, availableSchemas: Set<string>): any {
+  if (Array.isArray(obj)) {
+    return obj.map((item) => updateSchemaRefs(item, availableSchemas));
+  }
+
+  if (isObject(obj)) {
+    const newObj: any = {};
+    for (const key in obj) {
+      if (key === "$ref" && typeof obj[key] === "string") {
+        const ref = obj[key];
+        const match = ref.match(/^#\/components\/schemas\/(.+)$/);
+        if (match) {
+          const schemaName = match[1];
+          if (!availableSchemas.has(schemaName)) {
+            console.warn(`Referência a schema inexistente: ${schemaName}`);
+            newObj[key] = ref;
+            continue;
+          }
+        }
+      }
+
+      newObj[key] = updateSchemaRefs(obj[key], availableSchemas);
+    }
+    return newObj;
+  }
+
+  return obj;
+}
+/**
+ * Updates all `$ref` references in the Swagger object to point to the correct schema names.
+ *
+ * @param {any} swagger - The Swagger/OpenAPI object.
+ * @returns {any} - The updated Swagger object with corrected `$ref` references.
+ */
+export function updateSwaggerRefs(swagger: any): any {
+  const availableSchemas = new Set<string>();
+
+  // Collect all available schema names
+  if (swagger.components && swagger.components.schemas) {
+    for (const schemaName in swagger.components.schemas) {
+      if (swagger.components.schemas.hasOwnProperty(schemaName)) {
+        availableSchemas.add(schemaName);
+      }
+    }
+  }
+
+  // Update $ref references
+  return updateSchemaRefs(swagger, availableSchemas);
+}

@@ -13,6 +13,7 @@ import {
 } from "../types";
 import { deepMergeSwagger } from "../utils/fileManipulation/deepMergeSwagger";
 import { loadYamlSpecs } from "../utils/fileManipulation/loadYamlSpecs";
+import { updateSchemaRefs } from "../utils/swaggerRefUpdater";
 
 /**
  * Class responsible for generating Swagger documentation based on Zod schemas.
@@ -321,6 +322,23 @@ export class ZodSwaggerGenerator {
       this.spec.paths[route.path][route.method] = methodSpec;
     });
 
+    // Merge specs definidos via mergeSpecs
+    if (this.options.mergeSpecs) {
+      for (const spec of this.options.mergeSpecs) {
+        let loadedSpec: any;
+
+        if (spec.type === "json" || spec.type === "yaml") {
+          loadedSpec = loadYamlSpecs(spec.path); // você já tem esta função utilitária
+        } else if (spec.type === "preloaded") {
+          loadedSpec = spec.content;
+        }
+
+        if (loadedSpec) {
+          this.spec = deepMergeSwagger(this.spec, loadedSpec);
+        }
+      }
+    }
+
     return this.mergeSwaggerSpecs(this.spec, this.options);
   }
 
@@ -397,7 +415,7 @@ export class ZodSwaggerGenerator {
         swagger2Doc.paths[path][method] = swagger2Endpoint;
       }
     }
-    return swagger2Doc;
+    return updateSchemaRefs(swagger2Doc);
   }
 
   /**
@@ -666,6 +684,10 @@ export class ZodSwaggerGenerator {
     if (!options.mergeSpecs?.length) return baseSpec;
 
     let mergedSpec = { ...baseSpec };
+
+    if (!mergedSpec.components) mergedSpec.components = {};
+    if (!mergedSpec.components.schemas) mergedSpec.components.schemas = {};
+
     for (const specConfig of options.mergeSpecs) {
       try {
         // Case 1: Already received the paired object (for YAMLs loaded separately)
