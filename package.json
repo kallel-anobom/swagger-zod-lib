@@ -39,7 +39,7 @@
     "typeorm",
     "mongoose"
   ],
-  "author": "Seu Nome <seu@email.com>",
+  "author": "Kallel Ano Bom <kallel.front@gmail.com>",
   "license": "MIT",
   "dependencies": {
     "commander": "^13.1.0",
